@@ -3,12 +3,23 @@ import java.io.File
 abstract class Store(val city: String) {
     protected val inventory = mutableMapOf<String, Pair<Int, Double>>()
 
+    init {
+        initializeSalesStatisticsFile()
+    }
+
     abstract fun repairService(): String
 
     fun showPhones() {
         println("Телефоны доступные в магазине $city:")
+        var availablePhones = false
         inventory.forEach { (model, pair) ->
-            println("Модель: $model, Цена: ${pair.second} руб.")
+            if (pair.first > 0) {
+                println("Модель: $model, Цена: ${pair.second} руб.")
+                availablePhones = true
+            }
+        }
+        if (!availablePhones) {
+            println("На данный момент все модели распроданы.")
         }
     }
 
@@ -23,37 +34,41 @@ abstract class Store(val city: String) {
         }
     }
 
+    private fun initializeSalesStatisticsFile() {
+        val file = File("sales_statistics.txt")
+        if (!file.exists()) {
+            file.createNewFile()
+        }
+    }
+
     private fun updateSalesStatistics(model: String, price: Double) {
         val file = File("sales_statistics.txt")
-        val currentStats = file.readText().lines().map { it.split(":") }
-        val newStats = mutableListOf<Pair<String, Pair<Int, Double>>>()
+        val currentStats = file.readLines()
+        val statsMap = mutableMapOf<String, Pair<Int, Double>>()
         for (line in currentStats) {
-            if (line.size == 3) {
-                val existingModel = line[0]
-                val count = line[1].toInt()
-                val totalPrice = line[2].toDouble()
-                if (existingModel == model) {
-                    newStats.add(
-                        Pair(existingModel, Pair(count + 1, totalPrice + price))
-                    )
-                } else {
-                    newStats.add(Pair(existingModel, Pair(count, totalPrice)))
-                }
+            val parts = line.split(":")
+            if (parts.size == 3) {
+                val existingModel = parts[0]
+                val count = parts[1].toInt()
+                val totalPrice = parts[2].toDouble()
+                statsMap[existingModel] = Pair(count, totalPrice)
             }
         }
+        val currentData = statsMap[model] ?: Pair(0, 0.0)
+        statsMap[model] = Pair(currentData.first + 1, currentData.second + price)
         file.writeText(
-            newStats.joinToString("\n") { "${it.first}:${it.second.first}:${it.second.second}" }
+            statsMap.entries.joinToString("\n") { "${it.key}:${it.value.first}:${it.value.second}" }
         )
     }
 
     fun showSalesStatistics() {
         val file = File("sales_statistics.txt")
-        if (!file.exists()) {
+        if (!file.exists() || file.readText().isBlank()) {
             println("Нет данных о продажах.")
             return
         }
         println("Статистика продаж:")
-        file.readText().lines().forEach {
+        file.readText().lines().filter { it.isNotBlank() }.forEach {
             val parts = it.split(":")
             if (parts.size == 3) {
                 val model = parts[0]
