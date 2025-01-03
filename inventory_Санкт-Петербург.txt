@@ -1,0 +1,5 @@
+iPhone13:8:81999
+SamsungS21:6:71999
+XiaomiMi11:12:51999
+OnePlus9:4:60999
+GooglePixel5:2:65999
